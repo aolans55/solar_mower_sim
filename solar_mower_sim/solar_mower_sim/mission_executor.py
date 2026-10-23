@@ -14,7 +14,6 @@ LLM は「何をするか」だけを決め、制御ループには一切関与�
 """
 import json
 import math
-import time
 from collections import deque
 from typing import Any, Dict, List, Optional
 
@@ -74,9 +73,14 @@ class MissionExecutor(Node):
         self.step_start_xy = (0.0, 0.0)
         self.step_start_yaw = 0.0
         self.step_start_t = 0.0
-        self.last_t = time.monotonic()
+        self.last_t = self.now()
         self.create_timer(1.0 / self.rate, self.control_loop)
         self.get_logger().info("mission_executor ready. waiting for /mission_cmd")
+
+    def now(self) -> float:
+        """ROS 時刻 [s]。use_sim_time ならシミュレーション時刻なので、RTF < 1 でも PID の dt や
+        duration が実時間でずれない (WSL2 では RTF ≈ 0.25〜0.33)"""
+        return self.get_clock().now().nanoseconds * 1e-9
 
     # ------------------------------------------------------------ callbacks
     def on_scan(self, msg: LaserScan) -> None:
@@ -119,7 +123,7 @@ class MissionExecutor(Node):
         self.state = self.current.get("action", "stop")
         self.step_start_xy = self.odom_xy
         self.step_start_yaw = self.yaw
-        self.step_start_t = time.monotonic()
+        self.step_start_t = self.now()
         spd = float(self.current.get("speed", self.default_speed))
         if self.state == "follow_panel":
             side = 1 if str(self.current.get("side", "left")).lower() in ("left", "左") else -1
@@ -150,9 +154,11 @@ class MissionExecutor(Node):
 
     # ------------------------------------------------------------ control
     def control_loop(self) -> None:
-        now = time.monotonic()
+        now = self.now()
         dt = now - self.last_t
         self.last_t = now
+        if not 0.0 < dt < 0.5:  # /clock 受信前・シミュレーション一時停止・リセット直後
+            dt = 1.0 / self.rate
         if self.current is None:
             return
         traveled = math.hypot(self.odom_xy[0] - self.step_start_xy[0],
