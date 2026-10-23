@@ -6,3 +6,8 @@ log/
 .pytest_cache/
 *.mp4
 LOCAL.md
+
+# 自分向けの引継ぎ・進捗・レポート作業用の文書 (手元のみ、公開しない)
+CLAUDE.md
+solar_mower_sim/docs/report_template.md
+solar_mower_sim/docs/tuning_log.md
