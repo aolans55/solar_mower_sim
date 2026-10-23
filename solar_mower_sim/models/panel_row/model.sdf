@@ -1,0 +1,144 @@
+<?xml version="1.0" ?>
+<!-- 自動生成: scripts/gen_panel_row.py 6 -->
+<sdf version="1.9">
+  <model name="panel_row">
+    <static>true</static>
+    <link name="row_link">
+      <visual name="panel_0_v">
+        <pose>-5.000 0 0.871 0.3491 0 0</pose>
+        <geometry><box><size>2.0 1.0 0.04</size></box></geometry>
+        <material><ambient>0.05 0.10 0.35 1</ambient><diffuse>0.05 0.10 0.35 1</diffuse></material>
+      </visual>
+      <collision name="panel_0_c">
+        <pose>-5.000 0 0.871 0.3491 0 0</pose>
+        <geometry><box><size>2.0 1.0 0.04</size></box></geometry>
+      </collision>
+      <visual name="panel_1_v">
+        <pose>-3.000 0 0.871 0.3491 0 0</pose>
+        <geometry><box><size>2.0 1.0 0.04</size></box></geometry>
+        <material><ambient>0.05 0.10 0.35 1</ambient><diffuse>0.05 0.10 0.35 1</diffuse></material>
+      </visual>
+      <collision name="panel_1_c">
+        <pose>-3.000 0 0.871 0.3491 0 0</pose>
+        <geometry><box><size>2.0 1.0 0.04</size></box></geometry>
+      </collision>
+      <visual name="panel_2_v">
+        <pose>-1.000 0 0.871 0.3491 0 0</pose>
+        <geometry><box><size>2.0 1.0 0.04</size></box></geometry>
+        <material><ambient>0.05 0.10 0.35 1</ambient><diffuse>0.05 0.10 0.35 1</diffuse></material>
+      </visual>
+      <collision name="panel_2_c">
+        <pose>-1.000 0 0.871 0.3491 0 0</pose>
+        <geometry><box><size>2.0 1.0 0.04</size></box></geometry>
+      </collision>
+      <visual name="panel_3_v">
+        <pose>1.000 0 0.871 0.3491 0 0</pose>
+        <geometry><box><size>2.0 1.0 0.04</size></box></geometry>
+        <material><ambient>0.05 0.10 0.35 1</ambient><diffuse>0.05 0.10 0.35 1</diffuse></material>
+      </visual>
+      <collision name="panel_3_c">
+        <pose>1.000 0 0.871 0.3491 0 0</pose>
+        <geometry><box><size>2.0 1.0 0.04</size></box></geometry>
+      </collision>
+      <visual name="panel_4_v">
+        <pose>3.000 0 0.871 0.3491 0 0</pose>
+        <geometry><box><size>2.0 1.0 0.04</size></box></geometry>
+        <material><ambient>0.05 0.10 0.35 1</ambient><diffuse>0.05 0.10 0.35 1</diffuse></material>
+      </visual>
+      <collision name="panel_4_c">
+        <pose>3.000 0 0.871 0.3491 0 0</pose>
+        <geometry><box><size>2.0 1.0 0.04</size></box></geometry>
+      </collision>
+      <visual name="panel_5_v">
+        <pose>5.000 0 0.871 0.3491 0 0</pose>
+        <geometry><box><size>2.0 1.0 0.04</size></box></geometry>
+        <material><ambient>0.05 0.10 0.35 1</ambient><diffuse>0.05 0.10 0.35 1</diffuse></material>
+      </visual>
+      <collision name="panel_5_c">
+        <pose>5.000 0 0.871 0.3491 0 0</pose>
+        <geometry><box><size>2.0 1.0 0.04</size></box></geometry>
+      </collision>
+      <visual name="post_0_v">
+        <pose>-6.000 0 0.436 0 0 0</pose>
+        <geometry><box><size>0.08 0.08 0.871</size></box></geometry>
+        <material><ambient>0.6 0.6 0.62 1</ambient><diffuse>0.6 0.6 0.62 1</diffuse></material>
+      </visual>
+      <collision name="post_0_c">
+        <pose>-6.000 0 0.436 0 0 0</pose>
+        <geometry><box><size>0.08 0.08 0.871</size></box></geometry>
+      </collision>
+      <visual name="post_1_v">
+        <pose>-4.000 0 0.436 0 0 0</pose>
+        <geometry><box><size>0.08 0.08 0.871</size></box></geometry>
+        <material><ambient>0.6 0.6 0.62 1</ambient><diffuse>0.6 0.6 0.62 1</diffuse></material>
+      </visual>
+      <collision name="post_1_c">
+        <pose>-4.000 0 0.436 0 0 0</pose>
+        <geometry><box><size>0.08 0.08 0.871</size></box></geometry>
+      </collision>
+      <visual name="post_2_v">
+        <pose>-2.000 0 0.436 0 0 0</pose>
+        <geometry><box><size>0.08 0.08 0.871</size></box></geometry>
+        <material><ambient>0.6 0.6 0.62 1</ambient><diffuse>0.6 0.6 0.62 1</diffuse></material>
+      </visual>
+      <collision name="post_2_c">
+        <pose>-2.000 0 0.436 0 0 0</pose>
+        <geometry><box><size>0.08 0.08 0.871</size></box></geometry>
+      </collision>
+      <visual name="post_3_v">
+        <pose>0.000 0 0.436 0 0 0</pose>
+        <geometry><box><size>0.08 0.08 0.871</size></box></geometry>
+        <material><ambient>0.6 0.6 0.62 1</ambient><diffuse>0.6 0.6 0.62 1</diffuse></material>
+      </visual>
+      <collision name="post_3_c">
+        <pose>0.000 0 0.436 0 0 0</pose>
+        <geometry><box><size>0.08 0.08 0.871</size></box></geometry>
+      </collision>
+      <visual name="post_4_v">
+        <pose>2.000 0 0.436 0 0 0</pose>
+        <geometry><box><size>0.08 0.08 0.871</size></box></geometry>
+        <material><ambient>0.6 0.6 0.62 1</ambient><diffuse>0.6 0.6 0.62 1</diffuse></material>
+      </visual>
+      <collision name="post_4_c">
+        <pose>2.000 0 0.436 0 0 0</pose>
+        <geometry><box><size>0.08 0.08 0.871</size></box></geometry>
+      </collision>
+      <visual name="post_5_v">
+        <pose>4.000 0 0.436 0 0 0</pose>
+        <geometry><box><size>0.08 0.08 0.871</size></box></geometry>
+        <material><ambient>0.6 0.6 0.62 1</ambient><diffuse>0.6 0.6 0.62 1</diffuse></material>
+      </visual>
+      <collision name="post_5_c">
+        <pose>4.000 0 0.436 0 0 0</pose>
+        <geometry><box><size>0.08 0.08 0.871</size></box></geometry>
+      </collision>
+      <visual name="post_6_v">
+        <pose>6.000 0 0.436 0 0 0</pose>
+        <geometry><box><size>0.08 0.08 0.871</size></box></geometry>
+        <material><ambient>0.6 0.6 0.62 1</ambient><diffuse>0.6 0.6 0.62 1</diffuse></material>
+      </visual>
+      <collision name="post_6_c">
+        <pose>6.000 0 0.436 0 0 0</pose>
+        <geometry><box><size>0.08 0.08 0.871</size></box></geometry>
+      </collision>
+      <visual name="front_beam_v">
+        <pose>0 -0.470 0.550 0 0 0</pose>
+        <geometry><box><size>12.0 0.1 0.1</size></box></geometry>
+        <material><ambient>0.55 0.55 0.58 1</ambient><diffuse>0.55 0.55 0.58 1</diffuse></material>
+      </visual>
+      <collision name="front_beam_c">
+        <pose>0 -0.470 0.550 0 0 0</pose>
+        <geometry><box><size>12.0 0.1 0.1</size></box></geometry>
+      </collision>
+      <visual name="rear_beam_v">
+        <pose>0 0.470 0.892 0 0 0</pose>
+        <geometry><box><size>12.0 0.1 0.1</size></box></geometry>
+        <material><ambient>0.55 0.55 0.58 1</ambient><diffuse>0.55 0.55 0.58 1</diffuse></material>
+      </visual>
+      <collision name="rear_beam_c">
+        <pose>0 0.470 0.892 0 0 0</pose>
+        <geometry><box><size>12.0 0.1 0.1</size></box></geometry>
+      </collision>
+    </link>
+  </model>
+</sdf>

@@ -1,0 +1,86 @@
+<?xml version="1.0" ?>
+<!--
+  solar_farm.sdf : ソーラー発電所ワールド
+  - 40 x 40 m の不整地 (heightmap)
+  - パネル列 2 本 (x 方向 12 m, y = -8 と y = +8)  ※列の前面(南側=-y)に横梁あり
+  - 履帯草刈りロボット tracked_mower を列1の南側に配置 (前方 +x)
+  座標系: +x 東, +y 北
+-->
+<sdf version="1.9">
+  <world name="solar_farm">
+
+    <physics name="1ms" type="ignored">
+      <max_step_size>0.001</max_step_size>
+      <real_time_factor>1.0</real_time_factor>
+    </physics>
+    <plugin filename="gz-sim-physics-system" name="gz::sim::systems::Physics"/>
+    <plugin filename="gz-sim-user-commands-system" name="gz::sim::systems::UserCommands"/>
+    <plugin filename="gz-sim-scene-broadcaster-system" name="gz::sim::systems::SceneBroadcaster"/>
+    <plugin filename="gz-sim-sensors-system" name="gz::sim::systems::Sensors">
+      <render_engine>ogre2</render_engine>
+    </plugin>
+    <plugin filename="gz-sim-imu-system" name="gz::sim::systems::Imu"/>
+    <plugin filename="gz-sim-contact-system" name="gz::sim::systems::Contact"/>
+
+    <scene>
+      <ambient>0.6 0.6 0.6 1</ambient>
+      <background>0.70 0.82 0.95 1</background>
+      <shadows>true</shadows>
+    </scene>
+
+    <light type="directional" name="sun">
+      <cast_shadows>true</cast_shadows>
+      <pose>0 0 20 0 0 0</pose>
+      <diffuse>0.9 0.9 0.85 1</diffuse>
+      <specular>0.3 0.3 0.3 1</specular>
+      <direction>-0.4 0.3 -0.8</direction>
+    </light>
+
+    <!-- 不整地 -->
+    <include>
+      <uri>model://solar_farm_terrain</uri>
+      <name>terrain</name>
+      <pose>0 0 0 0 0 0</pose>
+    </include>
+
+    <!-- パネル列 1 (南側) : 前面横梁は y = -8.47 -->
+    <include>
+      <uri>model://panel_row</uri>
+      <name>panel_row_1</name>
+      <pose>0 -8 0.12 0 0 0</pose>
+    </include>
+
+    <!-- パネル列 2 (北側) : 前面横梁は y = +7.53 -->
+    <include>
+      <uri>model://panel_row</uri>
+      <name>panel_row_2</name>
+      <pose>0 8 0.12 0 0 0</pose>
+    </include>
+
+    <!-- 不整地走破デモ用の目印ポール (列間の中央 y=0 を東西に走る) -->
+    <model name="marker_start">
+      <static>true</static>
+      <pose>-12 0 0.8 0 0 0</pose>
+      <link name="l"><visual name="v">
+        <geometry><cylinder><radius>0.05</radius><length>1.6</length></cylinder></geometry>
+        <material><ambient>0.9 0.1 0.1 1</ambient><diffuse>0.9 0.1 0.1 1</diffuse></material>
+      </visual></link>
+    </model>
+    <model name="marker_goal">
+      <static>true</static>
+      <pose>12 0 0.8 0 0 0</pose>
+      <link name="l"><visual name="v">
+        <geometry><cylinder><radius>0.05</radius><length>1.6</length></cylinder></geometry>
+        <material><ambient>0.1 0.9 0.1 1</ambient><diffuse>0.1 0.9 0.1 1</diffuse></material>
+      </visual></link>
+    </model>
+
+    <!-- 草刈りロボット: 列1の南側 0.9 m, 前方 +x -->
+    <include>
+      <uri>model://tracked_mower</uri>
+      <name>tracked_mower</name>
+      <pose>-7 -9.4 0.55 0 0 0</pose>
+    </include>
+
+  </world>
+</sdf>
