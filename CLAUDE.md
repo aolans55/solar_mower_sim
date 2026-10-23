@@ -8,7 +8,7 @@ Claude Code は起動時にこれを自動で読む。人間が読んでも分�
 - Physical AI 応用1講座（東大松尾研）の最終課題「AI×ロボティクスによる創造的タスクの実現」
 - 題材: **ソーラー発電所向け 履帯式草刈りロボット**の仮想環境デモ。ユーザーは本業で同用途の草刈り機を開発予定で、その制御系のプロトタイプも兼ねる
 - 必須デモ 3 機能:
-  1. 自然言語の指示で動く（ローカル LLM: Ollama）
+  1. 自然言語の指示で動く（ローカル LLM: OpenAI 互換 API。WSL2 では LM Studio、DGX Spark では Ollama）
   2. ソーラーパネル列（架台）に平行に走る（LiDAR + RANSAC + PID 壁追従）
   3. 凸凹地面を乗り越えながら直進する（heightmap + 履帯物理 + IMU 方位保持 PID）
 - **締切: 2026-11-02 (月) 10:00**。提出物は (a) 動画 1〜3 分 YouTube 限定公開以上、(b) GitHub public リポジトリ、(c) レポート PDF。課題要項の要点は README 8 節と `docs/report_template.md` を参照
@@ -22,7 +22,7 @@ Claude Code は起動時にこれを自動で読む。人間が読んでも分�
 | 制御ロジック `controllers.py` | 作成済み。pytest 6 件 PASS（ROS 非依存） |
 | `mission_executor.py` / `llm_commander.py` | 作成済み。Python 構文チェックのみ。**ROS 2 上で未実行** |
 | launch / bridge.yaml / setup.py | 作成済み。**colcon build 未実施** |
-| LLM プロンプト | 作成済み。**Ollama で未検証** |
+| LLM プロンプト | 作成済み。LM Studio (`qwen3.5-9b-mtp`) で `test_llm.py` 8/8 OK（2026-10-23）。Ollama では未検証 |
 | 環境構築 | 何も入っていない。`solar_mower_sim/scripts/setup_dgx_spark.sh` が Ubuntu 24.04 用の一括手順 |
 
 つまり「設計とコードは一通り揃っているが、一度も動かしていない」状態。最初の仕事は **動かして壊れている所を直すこと**。
@@ -32,20 +32,25 @@ Claude Code は起動時にこれを自動で読む。人間が読んでも分�
 - ユーザーの機材: DGX Spark（Ubuntu 24.04 arm64, 128GB）、Jetson Orin Nano、Windows 11 PC（Lunar Lake / Intel Arc 140V 内蔵 GPU、dGPU なし）
 - **このセッションは Windows PC の WSL2 (Ubuntu 24.04)**。日常開発・動作確認はここで行う。履帯物理の最終調整とフル画質録画は DGX Spark で行う（同じリポジトリを git で共有）
 - ROS 2 **Jazzy** + Gazebo **Harmonic**（`ros-jazzy-ros-gz`）。Humble/Fortress には変えない
-- LLM は **Ollama**（API キー不要、課題要項でも API 提供なし）。既定モデル `qwen2.5:7b`、環境変数 `OLLAMA_MODEL` / `OLLAMA_HOST` で変更可
+- LLM は **OpenAI 互換 API**（`/v1/chat/completions`）のローカルサーバー（API キー不要、課題要項でも API 提供なし）。WSL2 では **Windows 側の LM Studio**（`http://localhost:1234/v1`、既定）、外部 PC（DGX Spark）では **Ollama**（`http://<host>:11434/v1`）。環境変数 `LLM_BASE_URL` / `LLM_MODEL` / `LLM_API_KEY` / `LLM_REASONING_EFFORT` で切り替える（README 1 節）
+- 思考モデル（qwen3.5 等）は `reasoning_effort: none` を送らないと 1 回 40 秒以上かかる。既定で送っている
 - ロボットは **履帯必須**（ユーザー要件）。Gazebo の `TrackedVehicle` + `TrackController` プラグインを使用。どうしても安定しない場合のみ `DiffDrive` + 4 輪に退避（制御ノードは無変更で動く設計）
 
 ### WSL2 固有の注意
 - Intel 内蔵 GPU は Mesa d3d12 経由。`gpu_lidar` センサが動かなければ `models/tracked_mower/model.sdf` の `type="gpu_lidar"` を `type="lidar"`（CPU 版）に変更する。**launch 引数 `lidar:=cpu` で切り替えられるようにするのが TODO**
 - ogre2 が起動時に落ちる場合: `export LIBGL_ALWAYS_SOFTWARE=1`
-- `C:\Users\<user>\.wslconfig` で `memory=` を物理メモリの 2/3 程度に上げる（Gazebo + Ollama 7B 同居のため）。16GB 機なら LLM は `qwen2.5:3b` に落とす
-- Ollama を Windows 側に入れる場合、WSL から届かなければ `.wslconfig` に `networkingMode=mirrored`、または `OLLAMA_HOST=http://$(hostname).local:11434` 等で向き先指定
+- `C:\Users\<user>\.wslconfig` で `memory=` を物理メモリの 2/3 程度に上げる（Gazebo 用。LLM は Windows 側の LM Studio で動かすので WSL のメモリは使わない）
+- Windows 側の LM Studio には `.wslconfig` の `networkingMode=mirrored`（設定済み）で `localhost:1234` から届く。届かなければ LM Studio の Developer タブでサーバーが起動しているか確認
+- conda (miniconda) の base が有効だと `python3` が 3.13 になり ROS 2 Jazzy (3.12) と衝突する。ROS を使う端末では `conda deactivate`
+- 環境構築は Docker（`compose.yaml` + `docker/`、Docker Desktop の WSL 連携が必要）。WSLg の X11/Wayland と `/dev/dxg` をコンテナに渡して GPU 描画する。WSL への直接インストール（`scripts/setup_wsl2.sh`）は使わない方針
+- Docker Desktop は WSL2 と同じ VM で動くので、`.wslconfig` の `memory=` がコンテナにも効く
+- git の作者名はリポジトリローカルで `author <author@example.com>`
 
 ## 3. アーキテクチャ（触る前に把握すること）
 
 ```
 端末入力/ /voice_text ─▶ llm_commander ──/mission_cmd (JSON)──▶ mission_executor ──/cmd_vel──▶ Gazebo TrackedVehicle
-                         (Ollama, スキーマ検証,                 (状態機械 20Hz)        ▲ ▲ ▲
+                         (LLM API, スキーマ検証,                 (状態機械 20Hz)        ▲ ▲ ▲
                           数値クランプ)                                        /scan /imu /odom ← ros_gz_bridge
 ```
 
@@ -58,7 +63,7 @@ Claude Code は起動時にこれを自動で読む。人間が読んでも分�
 
 ## 4. 次にやること（優先順）
 
-1. **環境構築**: `bash solar_mower_sim/scripts/setup_dgx_spark.sh`（WSL2 でもそのまま使える）。失敗したら README 1 節の手順を 1 行ずつ
+1. **環境構築**: WSL2 は **Docker**（ユーザー決定: ホストを汚さない）。`docker compose up -d --build` → `docker compose exec sim colcon build --symlink-install`（README 1 節）。DGX Spark は `setup_dgx_spark.sh`。失敗したら README 1 節の手順を 1 行ずつ
 2. **ビルド**: `cd ~/pai_ws && colcon build --symlink-install && source install/setup.bash`。setup.py の `data_files` でモデル・ワールド・プロンプトが `share/` に入るか確認
 3. **Gazebo 起動**: `ros2 launch solar_mower_sim sim.launch.py`。確認項目:
    - ワールドが読めるか（heightmap の PNG 読み込み、`model://` 解決は `GZ_SIM_RESOURCE_PATH` を launch で設定済み）
@@ -67,7 +72,7 @@ Claude Code は起動時にこれを自動で読む。人間が読んでも分�
    - `scripts/send_cmd.sh '{"action":"go_straight","distance":3}'` で前進するか。動かなければ `gz topic -e -t /cmd_vel` で Gazebo 側に届いているか切り分け
 4. **壁追従**: `scripts/send_cmd.sh '{"action":"follow_panel","side":"left","distance":0.9,"length":10}'`。振動するなら `PanelFollowController` の `kp_dist` ↓ `kd_dist` ↑。横梁を拾えていなければ LiDAR 高さ
 5. **不整地直進**: ロボットを列間 `(-12, 0)` に置き `go_straight heading east distance 24`。マーカーポール（赤→緑）の間を走る。方位保持 ON/OFF での横ずれ差をレポート用に記録
-6. **LLM**: `ollama pull qwen2.5:7b` → `python3 solar_mower_sim/scripts/test_llm.py` で 8 例の変換を確認。誤変換はプロンプトに例を追加して直す
+6. **LLM**: `python3 solar_mower_sim/scripts/test_llm.py` で 8 例の変換を確認（LM Studio は確認済み。DGX Spark の Ollama は `LLM_BASE_URL=http://<host>:11434/v1 LLM_MODEL=qwen2.5:7b` で）。誤変換はプロンプトに例を追加して直す
 7. **録画**: README 7 節の動画構成案。倍速にしたら動画内に明記
 8. **レポート**: `docs/report_template.md` の数値を埋めて PDF 化。ファイル名 `説明資料_PAI最終課題_<omnicampusアカウント名>.pdf`
 
@@ -87,7 +92,8 @@ CLAUDE.md                         本ファイル
 solar_mower_sim/
   solar_mower_sim/controllers.py    RANSAC / 壁追従 PID / 方位保持 PID（ROS 非依存）
   solar_mower_sim/mission_executor.py  JSON 状態機械 → /cmd_vel
-  solar_mower_sim/llm_commander.py  Ollama 呼び出し + validate()
+  solar_mower_sim/llm_client.py     OpenAI 互換 API 呼び出し + validate()（ROS 非依存）
+  solar_mower_sim/llm_commander.py  上記を使う ROS ノード
   models/tracked_mower/model.sdf    履帯ロボット（プラグイン・LiDAR・IMU）
   models/panel_row/                 生成物 ← scripts/gen_panel_row.py
   models/solar_farm_terrain/        生成物 ← scripts/gen_heightmap.py

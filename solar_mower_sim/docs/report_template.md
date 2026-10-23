@@ -16,7 +16,7 @@ omnicampus アカウント名: ________　　動画 URL: ________　　GitHub: _
 |---|---|
 | シミュレータ | Gazebo Harmonic, TrackedVehicle/TrackController プラグイン, heightmap 不整地 |
 | センサ | 2D LiDAR 360 本, IMU, オドメトリ |
-| AI | Ollama ローカル LLM (qwen2.5:7b) による自然言語→JSON 変換（推論のみ） |
+| AI | ローカル LLM（OpenAI 互換 API: LM Studio / Ollama）による自然言語→JSON 変換（推論のみ） |
 | 制御 | RANSAC 直線抽出 + 2 自由度 PID 壁追従 / IMU 方位保持 PID / 状態機械 |
 
 ## 3. 工夫した点

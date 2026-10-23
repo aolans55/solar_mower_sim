@@ -2,6 +2,8 @@
 """ROS なしで LLM の変換精度を確認するスクリプト (動画の冒頭シーン用にも使える)。
 
 usage: python3 scripts/test_llm.py [model]
+  接続先は環境変数 LLM_BASE_URL (既定: LM Studio http://localhost:1234/v1)。
+  例: LLM_BASE_URL=http://<dgx-spark>:11434/v1 python3 scripts/test_llm.py qwen2.5:7b
 """
 import json
 import os
@@ -9,12 +11,15 @@ import sys
 import time
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-from solar_mower_sim.llm_commander import OllamaClient, validate  # noqa: E402
+from solar_mower_sim.llm_client import LLMClient, default_base_url, validate  # noqa: E402
 
-model = sys.argv[1] if len(sys.argv) > 1 else os.environ.get("OLLAMA_MODEL", "qwen2.5:7b")
+model = sys.argv[1] if len(sys.argv) > 1 else os.environ.get("LLM_MODEL", "")
 prompt = open(os.path.join(os.path.dirname(__file__), "..", "prompts", "system_prompt.txt"),
               encoding="utf-8").read()
-llm = OllamaClient(model, os.environ.get("OLLAMA_HOST", "http://localhost:11434"), prompt)
+llm = LLMClient(default_base_url(), model, prompt,
+                api_key=os.environ.get("LLM_API_KEY", ""),
+                reasoning_effort=os.environ.get("LLM_REASONING_EFFORT", "none"))
+print(f"model={llm.model}  url={llm.base_url}")
 
 TESTS = [
     "パネルに沿って10メートル進んで",

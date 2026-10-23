@@ -7,12 +7,12 @@ Physical AI 応用1講座 最終課題「AI×ロボティクスによる創造�
 
 | # | 機能 | 使う技術 |
 |---|------|---------|
-| 1 | **自然言語の指示で動く** | ローカル LLM (Ollama) が日本語指示 → JSON コマンドに変換。制御ループには LLM を入れない安全設計 |
+| 1 | **自然言語の指示で動く** | ローカル LLM (OpenAI 互換 API: LM Studio / Ollama) が日本語指示 → JSON コマンドに変換。制御ループには LLM を入れない安全設計 |
 | 2 | **パネル列に平行に走る** | 2D LiDAR 点群から架台の横梁を RANSAC で直線抽出 → 距離・角度の 2 自由度 PID で壁追従 |
 | 3 | **凸凹地面を乗り越えつつ直進** | heightmap 不整地 + 履帯物理 (TrackedVehicle)。IMU ヨー角の方位保持 PID で履帯スリップによる進路ずれを補正 |
 
 ```
- オペレータ ──日本語──▶ llm_commander (Ollama) ──JSON──▶ mission_executor ──/cmd_vel──▶ Gazebo
+ オペレータ ──日本語──▶ llm_commander (LLM) ──JSON──▶ mission_executor ──/cmd_vel──▶ Gazebo
                                                              ▲  ▲  ▲
                                                  /scan  /imu  /odom (ros_gz_bridge)
 ```
@@ -33,12 +33,48 @@ sudo apt install -y ros-jazzy-ros-gz
 # Python 依存
 sudo apt install -y python3-numpy python3-requests python3-pil python3-pytest
 
-# Ollama (ローカル LLM)
+# Ollama (ローカル LLM, DGX Spark で LLM も動かす場合)
 curl -fsSL https://ollama.com/install.sh | sh
 ollama pull qwen2.5:7b        # 日本語が得意な 7B。余裕があれば qwen2.5:14b / 32b
 ```
 
-`scripts/setup_dgx_spark.sh` に上記をまとめてある。
+`scripts/setup_dgx_spark.sh` に上記をまとめてある。WSL2 では `scripts/setup_wsl2.sh`
+(LLM は Windows 側の LM Studio を使うので WSL には入れない)。
+
+### LLM サーバーの選択 (OpenAI 互換 API)
+
+`llm_commander` は OpenAI 互換の `/v1/chat/completions` を呼ぶ。環境変数 (または同名の ROS パラメータ
+`base_url` / `model` / `api_key` / `reasoning_effort`) で接続先を切り替える。
+
+| 変数 | 既定 | 説明 |
+|------|------|------|
+| `LLM_BASE_URL` | `http://localhost:1234/v1` (LM Studio) | 未設定で `OLLAMA_HOST` があれば `$OLLAMA_HOST/v1` |
+| `LLM_MODEL` | 空 = サーバーの先頭のチャットモデル | 例: `qwen3.5-9b-mtp`, `qwen2.5:7b` |
+| `LLM_API_KEY` | 空 | ローカルサーバーなら不要 |
+| `LLM_REASONING_EFFORT` | `none` | 思考モデルの推論を止めて高速化。空にすると送らない (400 なら自動で外して再送) |
+
+```bash
+# Windows の LM Studio (Developer タブで Start Server。WSL2 は mirrored ネットワークで localhost が届く)
+export LLM_BASE_URL=http://localhost:1234/v1 LLM_MODEL=qwen3.5-9b-mtp
+# 外部 PC (DGX Spark) の Ollama。DGX 側は OLLAMA_HOST=0.0.0.0 で起動しておく
+export LLM_BASE_URL=http://<dgx-spark>:11434/v1 LLM_MODEL=qwen2.5:7b
+```
+
+### WSL2 (Windows) では Docker で動かす
+
+ホストの WSL を汚さないよう、ROS 2 + Gazebo はコンテナに入れる (Docker Desktop の WSL 連携を有効にしておく)。
+GUI / GPU は WSLg をコンテナに渡し、LLM は Windows 側の LM Studio (`host.docker.internal:1234`) を使う。
+
+```bash
+docker compose up -d --build                              # 初回はイメージ作成で数十分
+docker compose exec sim colcon build --symlink-install    # ビルド (結果は Docker volume に保存)
+docker compose exec sim ros2 launch solar_mower_sim sim.launch.py
+docker compose exec sim ros2 run solar_mower_sim llm_commander      # 別端末
+docker compose exec sim bash                              # 任意のコマンド (ros2 topic echo 等)
+```
+
+GPU は Mesa の d3d12 ドライバ経由 (`GALLIUM_DRIVER=d3d12`)。描画がおかしい場合は `GALLIUM_DRIVER=llvmpipe docker compose up -d` でソフトウェア描画に切り替える。
+WSL に直接入れる場合は `scripts/setup_wsl2.sh` (apt でシステムに入る)。
 
 ## 2. ビルド
 
@@ -82,7 +118,8 @@ scripts/send_cmd.sh '{"action":"go_straight","distance":10,"heading":"east"}'
 
 ### LLM の変換精度だけ確認 (ROS 不要)
 ```bash
-python3 scripts/test_llm.py qwen2.5:7b
+python3 scripts/test_llm.py              # LLM_BASE_URL / LLM_MODEL の設定で接続
+python3 scripts/test_llm.py qwen3.5-9b-mtp   # モデルだけ指定
 ```
 
 ### 単体テスト
@@ -109,7 +146,8 @@ solar_mower_sim/
 ├── solar_mower_sim/
 │   ├── controllers.py        # RANSAC 直線抽出・壁追従 PID・方位保持 PID (ROS 非依存)
 │   ├── mission_executor.py   # JSON コマンドの状態機械 → /cmd_vel
-│   └── llm_commander.py      # Ollama で自然言語 → JSON、スキーマ検証
+│   ├── llm_client.py         # OpenAI 互換 API で自然言語 → JSON、スキーマ検証 (ROS 非依存)
+│   └── llm_commander.py      # 上記を使う ROS ノード
 ├── models/
 │   ├── tracked_mower/        # 履帯ロボット (TrackedVehicle + TrackController, LiDAR, IMU)
 │   ├── panel_row/            # パネル列 (scripts/gen_panel_row.py で生成)

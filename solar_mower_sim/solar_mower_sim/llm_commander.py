@@ -1,89 +1,33 @@
 #!/usr/bin/env python3
-"""自然言語 → JSON ミッションコマンド変換ノード (Ollama ローカル LLM)。
+"""自然言語 → JSON ミッションコマンド変換ノード (OpenAI 互換 API のローカル LLM)。
 
 入力: 端末の標準入力 (対話) または /voice_text (std_msgs/String)
 出力: /mission_cmd (std_msgs/String, JSON)
 
-LLM は「指示の解釈」だけを担当し、生成した JSON は executor 側で
+LLM 呼び出しと検証は llm_client.py (ROS 非依存)。接続先は LLM_BASE_URL 等で切り替える。
+
+LLM は「指示の解釈」だけを担当し、生成した JSON は validate() で
 スキーマ検証されるので、LLM の誤出力がそのまま駆動系に届くことはない。
 """
 import json
 import os
 import sys
 import threading
-from typing import Any, Dict, Optional
 
-import requests
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import String
 
-VALID_ACTIONS = {"follow_panel", "go_straight", "turn", "stop", "sequence"}
-
-
-def validate(cmd: Any) -> Optional[str]:
-    """スキーマ検証。問題があればエラーメッセージ、OK なら None"""
-    if not isinstance(cmd, dict):
-        return "not an object"
-    a = cmd.get("action")
-    if a not in VALID_ACTIONS:
-        return f"unknown action: {a}"
-    if a == "sequence":
-        steps = cmd.get("steps")
-        if not isinstance(steps, list) or not steps:
-            return "sequence needs non-empty steps"
-        for s in steps:
-            if (e := validate(s)) is not None:
-                return e
-            if s.get("action") == "sequence":
-                return "nested sequence not allowed"
-    # 数値の安全範囲にクランプ
-    if "speed" in cmd:
-        cmd["speed"] = max(0.1, min(1.0, float(cmd["speed"])))
-    if "distance" in cmd and a == "follow_panel":
-        cmd["distance"] = max(0.4, min(2.0, float(cmd["distance"])))
-    if "distance" in cmd and a == "go_straight":
-        cmd["distance"] = max(0.0, min(50.0, float(cmd["distance"])))
-    if "length" in cmd:
-        cmd["length"] = max(0.0, min(50.0, float(cmd["length"])))
-    if "angle_deg" in cmd:
-        cmd["angle_deg"] = max(-180.0, min(180.0, float(cmd["angle_deg"])))
-    return None
-
-
-class OllamaClient:
-    def __init__(self, model: str, host: str, system_prompt: str, timeout: float = 60.0):
-        self.model = model
-        self.url = host.rstrip("/") + "/api/chat"
-        self.system_prompt = system_prompt
-        self.timeout = timeout
-
-    def to_command(self, text: str) -> Dict[str, Any]:
-        payload = {
-            "model": self.model,
-            "stream": False,
-            "format": "json",
-            "options": {"temperature": 0.0},
-            "messages": [
-                {"role": "system", "content": self.system_prompt},
-                {"role": "user", "content": text},
-            ],
-        }
-        r = requests.post(self.url, json=payload, timeout=self.timeout)
-        r.raise_for_status()
-        content = r.json()["message"]["content"].strip()
-        # 念のためコードブロック除去
-        if content.startswith("```"):
-            content = content.strip("`")
-            content = content[content.find("{"):content.rfind("}") + 1]
-        return json.loads(content)
+from .llm_client import LLMClient, default_base_url, validate
 
 
 class LLMCommander(Node):
     def __init__(self) -> None:
         super().__init__("llm_commander")
-        self.declare_parameter("model", os.environ.get("OLLAMA_MODEL", "qwen2.5:7b"))
-        self.declare_parameter("host", os.environ.get("OLLAMA_HOST", "http://localhost:11434"))
+        self.declare_parameter("base_url", default_base_url())
+        self.declare_parameter("model", os.environ.get("LLM_MODEL", os.environ.get("OLLAMA_MODEL", "")))
+        self.declare_parameter("api_key", os.environ.get("LLM_API_KEY", ""))
+        self.declare_parameter("reasoning_effort", os.environ.get("LLM_REASONING_EFFORT", "none"))
         self.declare_parameter("prompt_file", "")
         self.declare_parameter("interactive", True)
 
@@ -95,12 +39,14 @@ class LLMCommander(Node):
         with open(prompt_file, encoding="utf-8") as f:
             system_prompt = f.read()
 
-        self.llm = OllamaClient(self.get_parameter("model").value,
-                                self.get_parameter("host").value, system_prompt)
+        self.llm = LLMClient(self.get_parameter("base_url").value,
+                             self.get_parameter("model").value, system_prompt,
+                             api_key=self.get_parameter("api_key").value,
+                             reasoning_effort=self.get_parameter("reasoning_effort").value)
         self.pub = self.create_publisher(String, "mission_cmd", 10)
         self.pub_log = self.create_publisher(String, "llm_log", 10)
         self.create_subscription(String, "voice_text", self.on_text, 10)
-        self.get_logger().info(f"llm_commander ready (model={self.llm.model})")
+        self.get_logger().info(f"llm_commander ready (model={self.llm.model}, url={self.llm.base_url})")
 
         if self.get_parameter("interactive").value:
             threading.Thread(target=self.stdin_loop, daemon=True).start()
@@ -123,7 +69,10 @@ class LLMCommander(Node):
         except Exception as e:  # noqa: BLE001
             self.get_logger().error(f"LLM error: {e}")
             return
-        err = validate(cmd)
+        try:
+            err = validate(cmd)
+        except (TypeError, ValueError) as e:  # 数値でない値 ("speed": "slow" 等)
+            err = f"invalid value: {e}"
         log = {"input": text, "command": cmd, "error": err}
         self.pub_log.publish(String(data=json.dumps(log, ensure_ascii=False)))
         if err:

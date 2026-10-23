@@ -1,0 +1,47 @@
+# シミュレーション用コンテナ (WSL2 + Docker Desktop)
+#
+#   docker compose up -d --build                       # 初回 (イメージ作成 + 起動)
+#   docker compose exec sim colcon build --symlink-install
+#   docker compose exec sim ros2 launch solar_mower_sim sim.launch.py
+#   docker compose exec sim ros2 run solar_mower_sim llm_commander   # 別端末
+#   docker compose exec sim bash                       # シェル
+#   docker compose down                                # 停止 (ビルド結果は volume に残る)
+#
+# GUI / GPU は WSLg をそのままコンテナに渡す (X11, Wayland, /dev/dxg + d3d12)。
+services:
+  sim:
+    build: ./docker
+    image: solar-mower-sim:jazzy
+    init: true
+    stdin_open: true
+    tty: true
+    volumes:
+      - ./solar_mower_sim:/ws/src/solar_mower_sim
+      - ws_build:/ws/build
+      - ws_install:/ws/install
+      - ws_log:/ws/log
+      # WSLg
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      - /mnt/wslg:/mnt/wslg
+      - /usr/lib/wsl:/usr/lib/wsl
+    devices:
+      - /dev/dxg
+    environment:
+      DISPLAY: ${DISPLAY:-:0}
+      WAYLAND_DISPLAY: ${WAYLAND_DISPLAY:-wayland-0}
+      XDG_RUNTIME_DIR: /mnt/wslg/runtime-dir
+      PULSE_SERVER: /mnt/wslg/PulseServer
+      LD_LIBRARY_PATH: /usr/lib/wsl/lib
+      # Mesa の d3d12 ドライバで Windows の GPU を使う (指定しないと llvmpipe になる)。
+      # 描画がおかしい場合は GALLIUM_DRIVER=llvmpipe でソフトウェア描画に切り替える
+      GALLIUM_DRIVER: ${GALLIUM_DRIVER:-d3d12}
+      # LLM: Windows 側の LM Studio (OpenAI 互換 API)。DGX Spark の Ollama なら上書きする
+      LLM_BASE_URL: ${LLM_BASE_URL:-http://host.docker.internal:1234/v1}
+      LLM_MODEL: ${LLM_MODEL:-}
+    extra_hosts:
+      - host.docker.internal:host-gateway
+
+volumes:
+  ws_build:
+  ws_install:
+  ws_log:
