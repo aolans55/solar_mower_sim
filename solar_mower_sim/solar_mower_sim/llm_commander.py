@@ -52,17 +52,18 @@ class LLMCommander(Node):
             threading.Thread(target=self.stdin_loop, daemon=True).start()
 
     def on_text(self, msg: String) -> None:
-        self.handle(msg.data)
+        self.handle_text(msg.data)
 
     def stdin_loop(self) -> None:
         print("\n==== 自然言語で指示を入力してください (Ctrl-D で終了) ====", flush=True)
+        print("> ", end="", flush=True)
         for line in sys.stdin:
             line = line.strip()
             if line:
-                self.handle(line)
+                self.handle_text(line)
             print("> ", end="", flush=True)
 
-    def handle(self, text: str) -> None:
+    def handle_text(self, text: str) -> None:
         self.get_logger().info(f'指示: "{text}"')
         try:
             cmd = self.llm.to_command(text)
