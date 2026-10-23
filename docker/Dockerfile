@@ -6,6 +6,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       ros-jazzy-ros-gz \
       python3-numpy python3-requests python3-pil python3-pytest \
       mesa-utils \
+      xterm xdotool fonts-noto-cjk \
     && rm -rf /var/lib/apt/lists/*
 
 # ベースイメージの ubuntu ユーザー (uid 1000 = WSL 側のユーザーと同じ) で動かし、
