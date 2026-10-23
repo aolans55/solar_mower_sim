@@ -61,8 +61,9 @@
 
     <!-- ===== LiDAR マスト ===== -->
     <link name="lidar_link">
-      <!-- 架台の横梁 (高さ 0.45 m) を確実に捉える高さに配置 -->
-      <pose>0.25 0 0.33 0 0 0</pose>
+      <!-- 架台の横梁の中心高さに合わせる。平地で LiDAR ≈ 0.30 + 0.37 = 0.67 m (world)、
+           横梁中心 = 列 z 0.12 + BEAM_Z 0.55 = 0.67 m、上下幅 0.15 m → 傾き ±2.9° (1.5 m 先) まで捉える -->
+      <pose>0.25 0 0.37 0 0 0</pose>
       <inertial>
         <mass>0.5</mass>
         <inertia><ixx>0.001</ixx><iyy>0.001</iyy><izz>0.001</izz><ixy>0</ixy><ixz>0</ixz><iyz>0</iyz></inertia>

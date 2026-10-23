@@ -4,7 +4,7 @@
 1 列 = 2 m 幅のパネルを x 方向に N 枚並べたもの。
   - パネル: 2.0 x 1.0 m, 南向き (−y) に 20° 傾斜, 下端高さ 0.70 m
   - 支柱  : 2 m ごとに 8 cm 角, 地面〜架台
-  - 横梁  : 列の前面 (−y 側) に高さ 0.55 m で連続 → LiDAR が捉える基準線
+  - 横梁  : 列の前面 (−y 側) に高さ 0.55 m (上下幅 0.15 m) で連続 → LiDAR が捉える基準線
 生成物は models/panel_row/model.sdf に書き出す。
 """
 import math
@@ -18,7 +18,9 @@ PANEL_T = 0.04
 TILT = math.radians(20.0)
 LOWER_EDGE_Z = 0.70
 BEAM_Z = 0.55
-BEAM_SIZE = 0.10
+BEAM_SIZE = 0.10   # 奥行き
+# 上下幅。不整地で車体が傾いても LiDAR 平面が外れないよう 0.10 → 0.15 (±7.5 cm)
+BEAM_H = 0.15
 POST_SIZE = 0.08
 
 row_len = N_PANELS * PANEL_W
@@ -55,7 +57,7 @@ for i in range(N_PANELS + 1):
                     f"{POST_SIZE} {POST_SIZE} {post_h:.3f}", "0.6 0.6 0.62 1"))
 # 前面横梁 (LiDAR 基準線)
 body.append(box("front_beam", f"0 {front_y:.3f} {BEAM_Z:.3f} 0 0 0",
-                f"{row_len} {BEAM_SIZE} {BEAM_SIZE}", "0.55 0.55 0.58 1"))
+                f"{row_len} {BEAM_SIZE} {BEAM_H}", "0.55 0.55 0.58 1"))
 # 背面横梁 (見た目)
 body.append(box("rear_beam", f"0 {-front_y:.3f} {BEAM_Z + PANEL_D*math.sin(TILT):.3f} 0 0 0",
                 f"{row_len} {BEAM_SIZE} {BEAM_SIZE}", "0.55 0.55 0.58 1"))
