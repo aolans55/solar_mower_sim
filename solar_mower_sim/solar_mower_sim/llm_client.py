@@ -11,7 +11,7 @@ from typing import Any, Dict, Optional
 
 import requests
 
-VALID_ACTIONS = {"follow_panel", "go_straight", "turn", "stop", "sequence"}
+VALID_ACTIONS = {"follow_panel", "go_straight", "turn", "stop", "sequence", "mow_lane"}
 
 
 def validate(cmd: Any) -> Optional[str]:
@@ -39,6 +39,10 @@ def validate(cmd: Any) -> Optional[str]:
         cmd["distance"] = max(0.0, min(50.0, float(cmd["distance"])))
     if "length" in cmd:
         cmd["length"] = max(0.0, min(50.0, float(cmd["length"])))
+    if "swath" in cmd:
+        cmd["swath"] = max(0.3, min(1.5, float(cmd["swath"])))
+    if "margin" in cmd:
+        cmd["margin"] = max(0.4, min(1.5, float(cmd["margin"])))
     if "angle_deg" in cmd:
         cmd["angle_deg"] = max(-180.0, min(180.0, float(cmd["angle_deg"])))
     return None
@@ -66,7 +70,8 @@ class LLMClient:
     """OpenAI 互換 Chat Completions API クライアント (LM Studio / Ollama / vLLM 等)"""
 
     def __init__(self, base_url: str, model: str, system_prompt: str,
-                 api_key: str = "", reasoning_effort: str = "none", timeout: float = 60.0):
+                 api_key: str = "", reasoning_effort: str = "none", timeout: float = 180.0):
+        # timeout: LM Studio はしばらく使わないとモデルを下ろすので、読み込み直しに 60 s 以上かかることがある
         self.base_url = base_url.rstrip("/")
         self.system_prompt = system_prompt
         self.reasoning_effort = reasoning_effort

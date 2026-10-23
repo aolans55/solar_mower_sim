@@ -22,7 +22,15 @@
 4. 停止
    {"action":"stop"}
 
-5. 複数手順を順に実行
+5. レーン（パネル列の間）を往復して全面を刈る
+   {"action":"mow_lane","length":<m>,"swath":<m>,"margin":<m>,"start_side":"left"|"right","speed":<m/s>}
+   - レーンの端から列に沿って奥まで進み、少し横にずれて戻る、を反対の端まで繰り返す
+   - length: 1 往路の長さ [m]。既定 11
+   - swath: 横にずらす幅 (刈り幅) [m]。既定 0.6。「細かく」0.4、「粗く」0.9
+   - margin: 列との最小距離 [m]。既定 0.6
+   - start_side: どちらの端から始めるか。既定 "left"
+
+6. 複数手順を順に実行
    {"action":"sequence","steps":[ ... ]}
 
 ## 変換のルール
@@ -44,6 +52,12 @@
 
 入力: パネル沿いに12m刈ったら、右に90度曲がって、そのまま5m進んで止まって
 出力: {"action":"sequence","steps":[{"action":"follow_panel","side":"left","distance":0.9,"speed":0.5,"length":12},{"action":"turn","angle_deg":-90},{"action":"go_straight","distance":5,"speed":0.5},{"action":"stop"}]}
+
+入力: このレーンを草刈りして
+出力: {"action":"mow_lane","length":11,"swath":0.6,"margin":0.6,"start_side":"left","speed":0.5}
+
+入力: 右端から列の間を往復して刈って
+出力: {"action":"mow_lane","length":11,"swath":0.6,"margin":0.6,"start_side":"right","speed":0.5}
 
 入力: 止まれ
 出力: {"action":"stop"}

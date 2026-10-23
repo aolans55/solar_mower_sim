@@ -10,6 +10,8 @@ LLM は「何をするか」だけを決め、制御ループには一切関与�
   {"action":"go_straight","distance":10,"speed":0.5,"heading":"north"}   # heading 省略で現在方位を維持
   {"action":"turn","angle_deg":90}        # 相対角, 左回り正
   {"action":"stop"}
+  {"action":"mow_lane","length":11,"swath":0.6,"margin":0.6,"start_side":"left"}
+                                          # レーン (列の間) を左端から右端まで往復して刈る (planner.py)
   {"action":"sequence","steps":[ ... ]}   # 上記を順番に実行
 """
 import json
@@ -25,6 +27,7 @@ from nav_msgs.msg import Odometry
 from sensor_msgs.msg import Imu, LaserScan
 from std_msgs.msg import String
 
+from .planner import plan_mow_lane
 from .controllers import (HeadingController, LineFitter, PanelFollowController,
                           quat_to_euler, wrap_angle)
 
@@ -121,6 +124,10 @@ class MissionExecutor(Node):
             return
         self.current = self.queue.popleft()
         self.state = self.current.get("action", "stop")
+        if self.state == "mow_lane":
+            self.expand_mow_lane(self.current)
+            self.next_step()
+            return
         self.step_start_xy = self.odom_xy
         self.step_start_yaw = self.yaw
         self.step_start_t = self.now()
@@ -146,6 +153,28 @@ class MissionExecutor(Node):
             self.next_step()
             return
         self.publish_status(f"start {self.state}: {self.current}")
+
+    def expand_mow_lane(self, cmd: Dict[str, Any]) -> None:
+        """LiDAR で左右の列までの距離を測り、往復の手順に展開してキューの先頭に入れる"""
+        fits = {}
+        if self.scan is not None:
+            for side in (1, -1):
+                pts = LineFitter.scan_to_points(
+                    self.scan.ranges, self.scan.angle_min, self.scan.angle_increment,
+                    self.scan.range_min, self.scan.range_max, side=side)
+                fits[side] = self.fitter.fit(pts)
+        if not fits.get(1) or not fits.get(-1):
+            self.publish_status("done mow_lane: panel rows not detected on both sides")
+            return
+        steps = plan_mow_lane(
+            fits[1].distance, fits[-1].distance,
+            length=float(cmd.get("length", 11.0)), swath=float(cmd.get("swath", 0.6)),
+            margin=float(cmd.get("margin", 0.6)), speed=float(cmd.get("speed", self.default_speed)),
+            start_side="right" if str(cmd.get("start_side", "left")).lower() in ("right", "右") else "left")
+        n_pass = sum(1 for s in steps if s["action"] == "follow_panel")
+        self.publish_status(f"start mow_lane: width {fits[1].distance + fits[-1].distance:.2f} m, "
+                            f"{n_pass} passes, {len(steps)} steps")
+        self.queue.extendleft(reversed(steps))
 
     def finish_step(self, reason: str) -> None:
         self.publish_status(f"done {self.state}: {reason}")
