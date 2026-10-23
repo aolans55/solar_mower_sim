@@ -19,7 +19,7 @@ Claude Code は起動時にこれを自動で読む。人間が読んでも分�
 | 項目 | 状態 |
 |---|---|
 | ロボット・ワールド SDF | WSL2 + Docker の Gazebo で動作確認済み（2026-10-23）。パネル列の間を 3.8 m に狭め、ロボットは列の間の中央からスタート |
-| 制御ロジック `controllers.py` | 作成済み。pytest 6 件 PASS（ROS 非依存、コンテナ内でも PASS） |
+| 制御ロジック `controllers.py` / `planner.py` | pytest 9 件 PASS（ROS 非依存） |
 | `mission_executor.py` / `llm_commander.py` | executor は go_straight / follow_panel（10 m、距離 0.898±0.025 m、角度 ±1°）を確認。タイマーをシミュレーション時刻に変更。turn / llm_commander は未確認 |
 | launch / bridge.yaml / setup.py | colcon build 成功。/clock /scan /imu /odom がブリッジされることを確認 |
 | LLM プロンプト | 作成済み。LM Studio (`qwen3.5-9b-mtp`) で `test_llm.py` 8/8 OK（2026-10-23）。Ollama では未検証 |
@@ -55,7 +55,7 @@ Claude Code は起動時にこれを自動で読む。人間が読んでも分�
 ```
 
 - **LLM は制御ループに入れない**。JSON の生成だけを担当し、`llm_commander.validate()` でスキーマ検証と数値クランプ（速度 ≤1.0 m/s 等）を通す。この設計はレポートの工夫点①なので崩さない
-- JSON アクション: `follow_panel / go_straight / turn / stop / sequence`。仕様は README 4 節
+- JSON アクション: `follow_panel / go_straight / turn / stop / sequence / mow_lane`。仕様は README 4 節。`mow_lane`（2026-10-23 追加、ユーザー要望）はレーンを左端から右端まで往復して刈る。`planner.py` が既存アクションの列に展開する（往路ごとに近い方の列を基準に follow_panel、端で 90°→横に swath→90°）
 - `controllers.py` は ROS 非依存。ロジック変更時は `python3 -m pytest solar_mower_sim/test` を必ず通す
 - 座標系: ロボット +x 前 / +y 左、ワールド +x 東 / +y 北。パネル列は x 方向に 12 m（x=-6〜6）、`y=-2.42` と `y=+2.42`（2026-10-23 ユーザー要望で列の間を 3.8 m = ロボット全幅 0.76 m の 5 倍に狭めた）。横梁は列の両面（列中心から ±0.47 m、外面 ±0.52 m）にあり、列の間からは左右どちらの列も 1.90 m に見える。ロボット初期位置は列の間の中央・西端 `(-6, 0)` 東向き。列の中央を走るのは `follow_panel distance 1.9`
 - LiDAR 高さは地面 + 約 0.54 m（列の間の地面が 0.02〜0.20 m なのでワールドで 0.56〜0.74 m）。横梁は列 z 0.12 + `BEAM_Z` 0.53 = 中心 0.65 m、上下幅 `BEAM_H` 0.30 m（0.50〜0.80 m）。変える時は両方を一緒に動かす（経緯は docs/tuning_log.md）
@@ -92,6 +92,7 @@ README.md                         使い方・調整ヒント・動画構成案�
 CLAUDE.md                         本ファイル
 solar_mower_sim/
   solar_mower_sim/controllers.py    RANSAC / 壁追従 PID / 方位保持 PID（ROS 非依存）
+  solar_mower_sim/planner.py        mow_lane の往復経路計画（ROS 非依存）
   solar_mower_sim/mission_executor.py  JSON 状態機械 → /cmd_vel
   solar_mower_sim/llm_client.py     OpenAI 互換 API 呼び出し + validate()（ROS 非依存）
   solar_mower_sim/llm_commander.py  上記を使う ROS ノード

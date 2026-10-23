@@ -118,6 +118,7 @@ ros2 topic echo /mission_status
 scripts/send_cmd.sh '{"action":"follow_panel","side":"left","distance":1.9,"length":11}'   # 列の間の中央を東へ
 scripts/send_cmd.sh '{"action":"follow_panel","side":"left","distance":0.9,"length":10}'   # 北の列に寄せて
 scripts/send_cmd.sh '{"action":"go_straight","distance":10,"heading":"east"}'
+scripts/send_cmd.sh '{"action":"mow_lane","length":11}'   # レーンを左端から右端まで往復して刈る
 ```
 
 ### LLM の変換精度だけ確認 (ROS 不要)
@@ -139,6 +140,7 @@ cd solar_mower_sim && python3 -m pytest test
 | `go_straight` | `distance` [m], `speed`, `heading` (north/south/east/west/deg) | IMU 方位保持で直進。`heading` 省略で現在方位 |
 | `turn` | `angle_deg` (左回り正) | その場旋回 |
 | `stop` | — | 停止・キュー消去 |
+| `mow_lane` | `length` [m], `swath` [m], `margin` [m], `start_side` (left/right), `speed` | レーン (列の間) を端から列に沿って奥まで進み、`swath` だけ横にずれて戻る、を反対の端まで繰り返す。開始時に LiDAR で左右の列までの距離を測って往復の本数を決める (`planner.py`) |
 | `sequence` | `steps[]` | 順次実行 |
 
 `llm_commander` 側でスキーマ検証と数値クランプ (速度 ≤ 1.0 m/s 等) を行うので、LLM の誤出力は駆動系に届かない。
@@ -149,6 +151,7 @@ cd solar_mower_sim && python3 -m pytest test
 solar_mower_sim/
 ├── solar_mower_sim/
 │   ├── controllers.py        # RANSAC 直線抽出・壁追従 PID・方位保持 PID (ROS 非依存)
+│   ├── planner.py            # レーン往復草刈りの経路計画 (ROS 非依存)
 │   ├── mission_executor.py   # JSON コマンドの状態機械 → /cmd_vel
 │   ├── llm_client.py         # OpenAI 互換 API で自然言語 → JSON、スキーマ検証 (ROS 非依存)
 │   └── llm_commander.py      # 上記を使う ROS ノード
