@@ -18,14 +18,14 @@ Claude Code は起動時にこれを自動で読む。人間が読んでも分�
 
 | 項目 | 状態 |
 |---|---|
-| ロボット・ワールド SDF | WSL2 + Docker の Gazebo で起動確認済み（2026-10-23）。地形テクスチャが Classic のパスで読めずワールドが落ちていたのを修正（`scripts/gen_terrain_textures.py` で生成）。`go_straight 3m` で実位置も 3.04 m 前進、RTF ≈ 1.0 |
+| ロボット・ワールド SDF | WSL2 + Docker の Gazebo で動作確認済み（2026-10-23）。パネル列の間を 3.8 m に狭め、ロボットは列の間の中央からスタート |
 | 制御ロジック `controllers.py` | 作成済み。pytest 6 件 PASS（ROS 非依存、コンテナ内でも PASS） |
 | `mission_executor.py` / `llm_commander.py` | executor は go_straight / follow_panel（10 m、距離 0.898±0.025 m、角度 ±1°）を確認。タイマーをシミュレーション時刻に変更。turn / llm_commander は未確認 |
 | launch / bridge.yaml / setup.py | colcon build 成功。/clock /scan /imu /odom がブリッジされることを確認 |
 | LLM プロンプト | 作成済み。LM Studio (`qwen3.5-9b-mtp`) で `test_llm.py` 8/8 OK（2026-10-23）。Ollama では未検証 |
 | 環境構築 | WSL2 は Docker イメージ `solar-mower-sim:jazzy` 構築済み（`./sim` でコンテナ内実行）。DGX Spark は `setup_dgx_spark.sh` |
 
-壁追従まで確認済み。次は 4 節の 5（不整地直進）から。WSL2 では RTF ≈ 0.25〜0.33（README 6 節）。
+壁追従まで確認済み（列の間のレイアウトでも中央 ±4 cm で 11 m、Uターン後の逆方向追従も OK）。次は 4 節の 5（不整地直進）から。WSL2 でも RTF ≈ 1.0（Gazebo サーバーを llvmpipe にしてから）。
 
 ## 2. 開発環境の方針（決定事項）
 
@@ -42,7 +42,7 @@ Claude Code は起動時にこれを自動で読む。人間が読んでも分�
 - `C:\Users\<user>\.wslconfig` で `memory=` を物理メモリの 2/3 程度に上げる（Gazebo 用。LLM は Windows 側の LM Studio で動かすので WSL のメモリは使わない）
 - Windows 側の LM Studio には `.wslconfig` の `networkingMode=mirrored`（設定済み）で `localhost:1234` から届く。届かなければ LM Studio の Developer タブでサーバーが起動しているか確認
 - conda (miniconda) の base が有効だと `python3` が 3.13 になり ROS 2 Jazzy (3.12) と衝突する。ROS を使う端末では `conda deactivate`
-- 環境構築は Docker（`compose.yaml` + `docker/`、Docker Desktop の WSL 連携が必要）。WSLg の X11/Wayland と `/dev/dxg` をコンテナに渡し、`GALLIUM_DRIVER=d3d12` で GPU 描画する（指定しないと llvmpipe）。コンテナ内のコマンドは必ず `./sim <cmd>` で実行（`docker compose exec` 直だと ROS 環境が読まれない）。WSL への直接インストール（`scripts/setup_wsl2.sh`）は使わない方針
+- 環境構築は Docker（`compose.yaml` + `docker/`、Docker Desktop の WSL 連携が必要）。WSLg の X11/Wayland と `/dev/dxg` をコンテナに渡し、GUI は `GALLIUM_DRIVER=d3d12` で GPU 描画する（指定しないと llvmpipe）。Gazebo サーバー（LiDAR の描画）は `GZ_SERVER_GALLIUM_DRIVER=llvmpipe`（d3d12 だと gpu_lidar の描画でセグメンテーション違反、しかも RTF 0.25 に落ちる）。launch はサーバーと GUI を別プロセスで起動し、GUI のカメラ初期位置は `config/gui.config`。コンテナ内のコマンドは必ず `./sim <cmd>` で実行（`docker compose exec` 直だと ROS 環境が読まれない）。WSL への直接インストール（`scripts/setup_wsl2.sh`）は使わない方針
 - Docker Desktop は WSL2 と同じ VM で動くので、`.wslconfig` の `memory=` がコンテナにも効く
 - git の作者名はリポジトリローカルで `author <author@example.com>`
 
@@ -57,8 +57,9 @@ Claude Code は起動時にこれを自動で読む。人間が読んでも分�
 - **LLM は制御ループに入れない**。JSON の生成だけを担当し、`llm_commander.validate()` でスキーマ検証と数値クランプ（速度 ≤1.0 m/s 等）を通す。この設計はレポートの工夫点①なので崩さない
 - JSON アクション: `follow_panel / go_straight / turn / stop / sequence`。仕様は README 4 節
 - `controllers.py` は ROS 非依存。ロジック変更時は `python3 -m pytest solar_mower_sim/test` を必ず通す
-- 座標系: ロボット +x 前 / +y 左、ワールド +x 東 / +y 北。パネル列は x 方向に 12 m、`y=-8` と `y=+8`。架台前面の横梁（LiDAR の基準線）は列から南へ 0.47 m、高さ 0.55 m。ロボット初期位置 `(-7, -9.4)` 前方 +x、列1が左側
-- LiDAR 高さは世界座標で約 0.67 m（lidar_link z 0.37 + 車体 0.30）。横梁は列 z 0.12 + `BEAM_Z` 0.55 = 中心 0.67 m、上下幅 `BEAM_H` 0.15 m（0.595〜0.745 m）。変える時は両方を一緒に動かす（2026-10-23 に合わせ直した。以前は LiDAR が横梁下端の 1 cm 上で、傾くと外れていた）
+- 座標系: ロボット +x 前 / +y 左、ワールド +x 東 / +y 北。パネル列は x 方向に 12 m（x=-6〜6）、`y=-2.42` と `y=+2.42`（2026-10-23 ユーザー要望で列の間を 3.8 m = ロボット全幅 0.76 m の 5 倍に狭めた）。横梁は列の両面（列中心から ±0.47 m、外面 ±0.52 m）にあり、列の間からは左右どちらの列も 1.90 m に見える。ロボット初期位置は列の間の中央・西端 `(-6, 0)` 東向き。列の中央を走るのは `follow_panel distance 1.9`
+- LiDAR 高さは地面 + 約 0.54 m（列の間の地面が 0.02〜0.20 m なのでワールドで 0.56〜0.74 m）。横梁は列 z 0.12 + `BEAM_Z` 0.53 = 中心 0.65 m、上下幅 `BEAM_H` 0.30 m（0.50〜0.80 m）。変える時は両方を一緒に動かす（経緯は docs/tuning_log.md）
+- オドメトリ（/odom）の向きは履帯のその場旋回で滑ってずれるので、旋回後の /odom の位置は当てにならない（executor は移動距離の大きさだけ使うので問題なし）。方位は IMU、位置の確認は `gz model -m tracked_mower -p`（頻繁に呼ぶとシミュレーションが止まるので 1 回だけ）
 - パネル列と地形は生成物: `scripts/gen_panel_row.py`, `scripts/gen_heightmap.py`。SDF/PNG を手で直さず生成スクリプトを直す
 
 ## 4. 次にやること（優先順）
@@ -71,7 +72,7 @@ Claude Code は起動時にこれを自動で読む。人間が読んでも分�
    - `ros2 topic hz /scan /imu /odom` が出るか（bridge.yaml の型名を確認）
    - `scripts/send_cmd.sh '{"action":"go_straight","distance":3}'` で前進するか。動かなければ `gz topic -e -t /cmd_vel` で Gazebo 側に届いているか切り分け
 4. **壁追従**: `scripts/send_cmd.sh '{"action":"follow_panel","side":"left","distance":0.9,"length":10}'`。振動するなら `PanelFollowController` の `kp_dist` ↓ `kd_dist` ↑。横梁を拾えていなければ LiDAR 高さ
-5. **不整地直進**: ロボットを列間 `(-12, 0)` に置き `go_straight heading east distance 24`。マーカーポール（赤→緑）の間を走る。方位保持 ON/OFF での横ずれ差をレポート用に記録
+5. **不整地直進**: 初期位置 `(-6, 0)` から `go_straight heading east distance 12`。列の間（凸凹）をマーカーポール（赤 x=-7.5 → 緑 x=7.5）の方向へ走る。方位保持 ON/OFF での横ずれ差をレポート用に記録
 6. **LLM**: `python3 solar_mower_sim/scripts/test_llm.py` で 8 例の変換を確認（LM Studio は確認済み。DGX Spark の Ollama は `LLM_BASE_URL=http://<host>:11434/v1 LLM_MODEL=qwen2.5:7b` で）。誤変換はプロンプトに例を追加して直す
 7. **録画**: README 7 節の動画構成案。倍速にしたら動画内に明記
 8. **レポート**: `docs/report_template.md` の数値を埋めて PDF 化。ファイル名 `説明資料_PAI最終課題_<omnicampusアカウント名>.pdf`
@@ -100,6 +101,7 @@ solar_mower_sim/
   worlds/solar_farm.sdf             ワールド（列 2 本・マーカー・ロボット初期位置）
   launch/sim.launch.py              gz_sim + bridge + executor (+ llm:=true)
   config/bridge.yaml                ros_gz_bridge
+  config/gui.config                 Gazebo GUI 設定（カメラ初期位置: 列の間を後方上空から）
   prompts/system_prompt.txt         LLM システムプロンプト（few-shot）
   scripts/setup_dgx_spark.sh        環境構築一括
   scripts/send_cmd.sh               JSON 直送（LLM 抜きデバッグ）

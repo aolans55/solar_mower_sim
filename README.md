@@ -97,7 +97,7 @@ source install/setup.bash
 source ~/pai_ws/install/setup.bash
 ros2 launch solar_mower_sim sim.launch.py
 ```
-Gazebo が開き、パネル列 2 本と不整地、その南側に橙色の履帯ロボットが現れる。
+Gazebo が開き、パネル列 2 本 (列の間 3.8 m = ロボット幅の 5 倍) と不整地、列の間の中央に橙色の履帯ロボットが現れる。
 GUI 左下の ▶ で再生が始まっていなければ押す (`-r` で自動再生指定済み)。
 
 ### 端末 2: 自然言語コマンド
@@ -115,7 +115,8 @@ ros2 topic echo /mission_status
 
 ### LLM を使わず JSON を直接送る (デバッグ)
 ```bash
-scripts/send_cmd.sh '{"action":"follow_panel","side":"left","distance":0.9,"length":10}'
+scripts/send_cmd.sh '{"action":"follow_panel","side":"left","distance":1.9,"length":11}'   # 列の間の中央を東へ
+scripts/send_cmd.sh '{"action":"follow_panel","side":"left","distance":0.9,"length":10}'   # 北の列に寄せて
 scripts/send_cmd.sh '{"action":"go_straight","distance":10,"heading":"east"}'
 ```
 
@@ -168,7 +169,9 @@ solar_mower_sim/
 - **履帯が動かない / 滑る**: `models/tracked_mower/model.sdf` の `<mu>`, `<kp>`, `<tracks_separation>`、ワールドの `max_step_size` (0.001 → 0.0005) を調整。TrackController は DART 物理エンジン前提。
 - **壁追従が振動する**: `PanelFollowController` の `kp_dist` を下げ `kd_dist` を上げる。`inlier_thresh` (6 cm) を広げると不整地での LiDAR 傾きに強くなる。
 - **直進で蛇行する**: `HeadingController` の `kp` を下げる。急斜面では `pitch` で自動減速。
-- **LiDAR が架台を捉えない / 壁追従が "panel lost" で止まる**: LiDAR 平面が横梁から外れている。ワールド座標で LiDAR ≈ 0.67 m (`model.sdf` の lidar_link z 0.37 + 車体 0.30)、横梁中心 = 列 z 0.12 + `BEAM_Z` 0.55 = 0.67 m、上下幅 `BEAM_H` 0.15 m。以前は LiDAR が横梁下端の 1 cm 上しかなく、車体が 1° 傾くだけで外れていた。切り分けは `scripts/diag_panel_fit.py` (左右の点数・RANSAC 結果を表示)。
+- **LiDAR が架台を捉えない / 壁追従が "panel lost" で止まる**: LiDAR 平面が横梁から外れている。LiDAR は地面 + 約 0.54 m で、列の間の凸凹 (地面 0.02〜0.20 m) でワールド 0.56〜0.74 m に変わる。横梁はワールドで 0.50〜0.80 m (`gen_panel_row.py` の `BEAM_Z` 0.53 + 列 z 0.12、`BEAM_H` 0.30)。切り分けは `scripts/diag_panel_fit.py` (左右の点数・RANSAC 結果を表示)。
+- **WSL2 で Gazebo が `GpuLidarSensor` の描画中にセグメンテーション違反で落ちる / 遅い (RTF 0.25)**: d3d12 で LiDAR を描画していたのが原因。launch は Gazebo のサーバーと GUI を別プロセスで起動し、サーバーだけ `GZ_SERVER_GALLIUM_DRIVER=llvmpipe` (compose.yaml で設定) にした。これで RTF ≈ 1.0。
+- **旋回後に /odom の位置がおかしい**: 履帯はその場旋回で滑るので、オドメトリの向きがずれ、その後の位置も狂う。方位は IMU を使う (executor は移動距離の大きさしか使わないので影響なし)。実際の位置は `gz model -m tracked_mower -p` で確認 (連続で呼ぶとシミュレーションが止まるので 1 回ずつ)。
 - **WSL2 で Gazebo が起動直後に `LLVM ERROR: inconsistency in registered CommandLine options` で落ちる**: Intel GPU ドライバ (libigc) が 2 スレッド同時に初期化されたときの競合で、まれに起きる (8 回中 1 回)。起動し直せばよい。Gazebo が落ちても bridge と executor は残るので、`./sim pkill -f "parameter_bridge|mission_executor"` で消してから再起動 (残ると cmd_vel が二重になる)。
 - **シミュレーションが遅い**: WSL2 (Lunar Lake) では RTF ≈ 0.33 (headless) / 0.25 (GUI)。Gazebo の `/stats` の値は当てにならないので `/clock` と実時間で比べる。制御はシミュレーション時刻で動くので結果は変わらない。録画は DGX Spark で。
 - **履帯プラグインがどうしても安定しない場合の保険**: `DiffDrive` プラグイン + 4 輪に差し替え (履帯の見た目は維持)。制御ノード側は無変更で動く。
