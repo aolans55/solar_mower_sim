@@ -3,28 +3,32 @@
   ros2 launch solar_mower_sim sim.launch.py            # GUI あり
   ros2 launch solar_mower_sim sim.launch.py gui:=false # ヘッドレス
   ros2 launch solar_mower_sim sim.launch.py llm:=true  # llm_commander も同時起動 (別端末推奨)
+
+Gazebo はサーバー (物理・センサー) と GUI を別プロセスで起動する。環境変数 GZ_SERVER_GALLIUM_DRIVER が
+あればサーバーだけその Mesa ドライバで描画する (WSL2 では llvmpipe: d3d12 だと gpu_lidar の描画で
+セグメンテーション違反が起きるため。compose.yaml で設定)。
 """
 import os
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, SetEnvironmentVariable
+from launch.actions import DeclareLaunchArgument, ExecuteProcess, SetEnvironmentVariable
 from launch.conditions import IfCondition
-from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.substitutions import LaunchConfiguration, PythonExpression
+from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
 
 
 def generate_launch_description():
     pkg = get_package_share_directory("solar_mower_sim")
-    ros_gz = get_package_share_directory("ros_gz_sim")
 
     world = LaunchConfiguration("world")
     gui = LaunchConfiguration("gui")
     llm = LaunchConfiguration("llm")
 
-    headless = PythonExpression(["'' if '", gui, "' == 'true' else '-s '"])
-    gz_args = ["-r ", headless, os.path.join(pkg, "worlds", ""), world]
+    world_path = PathJoinSubstitution([pkg, "worlds", world])
+    server_env = {}
+    if os.environ.get("GZ_SERVER_GALLIUM_DRIVER"):
+        server_env["GALLIUM_DRIVER"] = os.environ["GZ_SERVER_GALLIUM_DRIVER"]
 
     return LaunchDescription([
         DeclareLaunchArgument("world", default_value="solar_farm.sdf"),
@@ -35,10 +39,12 @@ def generate_launch_description():
         SetEnvironmentVariable("GZ_SIM_RESOURCE_PATH",
                                os.path.join(pkg, "models") + ":" + os.path.join(pkg, "worlds")),
 
-        IncludeLaunchDescription(
-            PythonLaunchDescriptionSource(os.path.join(ros_gz, "launch", "gz_sim.launch.py")),
-            launch_arguments={"gz_args": gz_args}.items(),
-        ),
+        ExecuteProcess(cmd=["gz", "sim", "-s", "-r", world_path],
+                       additional_env=server_env, output="screen", name="gz_server"),
+        # GUI のカメラ初期位置は config/gui.config で指定 (列の間を見下ろす)
+        ExecuteProcess(cmd=["gz", "sim", "-g", "--gui-config",
+                            os.path.join(pkg, "config", "gui.config")],
+                       output="screen", name="gz_gui", condition=IfCondition(gui)),
 
         Node(
             package="ros_gz_bridge",

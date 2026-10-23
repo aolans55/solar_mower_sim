@@ -35,6 +35,9 @@ services:
       # Mesa の d3d12 ドライバで Windows の GPU を使う (指定しないと llvmpipe になる)。
       # 描画がおかしい場合は GALLIUM_DRIVER=llvmpipe でソフトウェア描画に切り替える
       GALLIUM_DRIVER: ${GALLIUM_DRIVER:-d3d12}
+      # Gazebo サーバー (LiDAR の描画) だけはソフトウェア描画にする。d3d12 では gpu_lidar の描画中に
+      # セグメンテーション違反で落ちることがある (sim.launch.py が読む)
+      GZ_SERVER_GALLIUM_DRIVER: ${GZ_SERVER_GALLIUM_DRIVER:-llvmpipe}
       # LLM: Windows 側の LM Studio (OpenAI 互換 API)。DGX Spark の Ollama なら上書きする
       LLM_BASE_URL: ${LLM_BASE_URL:-http://host.docker.internal:1234/v1}
       LLM_MODEL: ${LLM_MODEL:-}
