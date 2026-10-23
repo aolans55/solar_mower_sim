@@ -2,6 +2,8 @@
 
 Physical AI 応用1講座 最終課題「AI×ロボティクスによる創造的タスクの実現」の提出用リポジトリ。
 
+**デモ動画**: https://youtu.be/MIEdaMYvsCE (2 分 17 秒。レーン往復草刈り `mow_lane`、途中 2 倍速)
+
 ソーラー発電所の草刈り作業を想定し、仮想環境 (ROS 2 Jazzy + Gazebo Harmonic) 内で
 履帯（クローラ）ロボットが次の 3 つを行う。
 
