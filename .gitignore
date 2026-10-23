@@ -5,3 +5,4 @@ install/
 log/
 .pytest_cache/
 *.mp4
+LOCAL.md
