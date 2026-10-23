@@ -23,13 +23,13 @@
             <size>40 40 0.35</size>
             <pos>0 0 0</pos>
             <texture>
-              <diffuse>file://media/materials/textures/dirt_diffusespecular.png</diffuse>
-              <normal>file://media/materials/textures/flat_normal.png</normal>
+              <diffuse>model://solar_farm_terrain/materials/textures/dirt_diffuse.png</diffuse>
+              <normal>model://solar_farm_terrain/materials/textures/flat_normal.png</normal>
               <size>4</size>
             </texture>
             <texture>
-              <diffuse>file://media/materials/textures/grass_diffusespecular.png</diffuse>
-              <normal>file://media/materials/textures/flat_normal.png</normal>
+              <diffuse>model://solar_farm_terrain/materials/textures/grass_diffuse.png</diffuse>
+              <normal>model://solar_farm_terrain/materials/textures/flat_normal.png</normal>
               <size>4</size>
             </texture>
             <blend>
