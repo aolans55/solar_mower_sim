@@ -66,12 +66,15 @@ export LLM_BASE_URL=http://<dgx-spark>:11434/v1 LLM_MODEL=qwen2.5:7b
 GUI / GPU は WSLg をコンテナに渡し、LLM は Windows 側の LM Studio (`host.docker.internal:1234`) を使う。
 
 ```bash
-docker compose up -d --build                              # 初回はイメージ作成で数十分
-docker compose exec sim colcon build --symlink-install    # ビルド (結果は Docker volume に保存)
-docker compose exec sim ros2 launch solar_mower_sim sim.launch.py
-docker compose exec sim ros2 run solar_mower_sim llm_commander      # 別端末
-docker compose exec sim bash                              # 任意のコマンド (ros2 topic echo 等)
+docker compose up -d --build                     # 初回はイメージ作成で数十分
+./sim colcon build --symlink-install             # ビルド (結果は Docker volume に保存)
+./sim ros2 launch solar_mower_sim sim.launch.py
+./sim ros2 run solar_mower_sim llm_commander     # 別端末
+./sim                                            # コンテナ内のシェル (ros2 topic echo 等)
 ```
+
+`./sim <cmd>` はコンテナ内で ROS 環境を読み込んでからコマンドを実行する
+(`docker compose exec` を直接使うと ROS 環境が読み込まれない)。
 
 GPU は Mesa の d3d12 ドライバ経由 (`GALLIUM_DRIVER=d3d12`)。描画がおかしい場合は `GALLIUM_DRIVER=llvmpipe docker compose up -d` でソフトウェア描画に切り替える。
 WSL に直接入れる場合は `scripts/setup_wsl2.sh` (apt でシステムに入る)。
@@ -151,7 +154,7 @@ solar_mower_sim/
 ├── models/
 │   ├── tracked_mower/        # 履帯ロボット (TrackedVehicle + TrackController, LiDAR, IMU)
 │   ├── panel_row/            # パネル列 (scripts/gen_panel_row.py で生成)
-│   └── solar_farm_terrain/   # 不整地 heightmap (scripts/gen_heightmap.py で生成)
+│   └── solar_farm_terrain/   # 不整地 heightmap (scripts/gen_heightmap.py) とテクスチャ (scripts/gen_terrain_textures.py)
 ├── worlds/solar_farm.sdf
 ├── launch/sim.launch.py
 ├── config/bridge.yaml        # ros_gz_bridge トピック対応

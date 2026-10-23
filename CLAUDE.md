@@ -18,14 +18,14 @@ Claude Code は起動時にこれを自動で読む。人間が読んでも分�
 
 | 項目 | 状態 |
 |---|---|
-| ロボット・ワールド SDF | 作成済み。**Gazebo 未実走**（作成環境に Gazebo がなかった） |
-| 制御ロジック `controllers.py` | 作成済み。pytest 6 件 PASS（ROS 非依存） |
-| `mission_executor.py` / `llm_commander.py` | 作成済み。Python 構文チェックのみ。**ROS 2 上で未実行** |
-| launch / bridge.yaml / setup.py | 作成済み。**colcon build 未実施** |
+| ロボット・ワールド SDF | WSL2 + Docker の Gazebo で起動確認済み（2026-10-23）。地形テクスチャが Classic のパスで読めずワールドが落ちていたのを修正（`scripts/gen_terrain_textures.py` で生成）。`go_straight 3m` で実位置も 3.04 m 前進、RTF ≈ 1.0 |
+| 制御ロジック `controllers.py` | 作成済み。pytest 6 件 PASS（ROS 非依存、コンテナ内でも PASS） |
+| `mission_executor.py` / `llm_commander.py` | executor は ROS 2 上で go_straight 動作確認済み。follow_panel / turn / llm_commander は未確認 |
+| launch / bridge.yaml / setup.py | colcon build 成功。/clock /scan /imu /odom がブリッジされることを確認 |
 | LLM プロンプト | 作成済み。LM Studio (`qwen3.5-9b-mtp`) で `test_llm.py` 8/8 OK（2026-10-23）。Ollama では未検証 |
-| 環境構築 | 何も入っていない。`solar_mower_sim/scripts/setup_dgx_spark.sh` が Ubuntu 24.04 用の一括手順 |
+| 環境構築 | WSL2 は Docker イメージ `solar-mower-sim:jazzy` 構築済み（`./sim` でコンテナ内実行）。DGX Spark は `setup_dgx_spark.sh` |
 
-つまり「設計とコードは一通り揃っているが、一度も動かしていない」状態。最初の仕事は **動かして壊れている所を直すこと**。
+Gazebo 起動と直進までは確認済み。次は 4 節の 4（壁追従）から。
 
 ## 2. 開発環境の方針（決定事項）
 
@@ -42,7 +42,7 @@ Claude Code は起動時にこれを自動で読む。人間が読んでも分�
 - `C:\Users\<user>\.wslconfig` で `memory=` を物理メモリの 2/3 程度に上げる（Gazebo 用。LLM は Windows 側の LM Studio で動かすので WSL のメモリは使わない）
 - Windows 側の LM Studio には `.wslconfig` の `networkingMode=mirrored`（設定済み）で `localhost:1234` から届く。届かなければ LM Studio の Developer タブでサーバーが起動しているか確認
 - conda (miniconda) の base が有効だと `python3` が 3.13 になり ROS 2 Jazzy (3.12) と衝突する。ROS を使う端末では `conda deactivate`
-- 環境構築は Docker（`compose.yaml` + `docker/`、Docker Desktop の WSL 連携が必要）。WSLg の X11/Wayland と `/dev/dxg` をコンテナに渡して GPU 描画する。WSL への直接インストール（`scripts/setup_wsl2.sh`）は使わない方針
+- 環境構築は Docker（`compose.yaml` + `docker/`、Docker Desktop の WSL 連携が必要）。WSLg の X11/Wayland と `/dev/dxg` をコンテナに渡し、`GALLIUM_DRIVER=d3d12` で GPU 描画する（指定しないと llvmpipe）。コンテナ内のコマンドは必ず `./sim <cmd>` で実行（`docker compose exec` 直だと ROS 環境が読まれない）。WSL への直接インストール（`scripts/setup_wsl2.sh`）は使わない方針
 - Docker Desktop は WSL2 と同じ VM で動くので、`.wslconfig` の `memory=` がコンテナにも効く
 - git の作者名はリポジトリローカルで `author <author@example.com>`
 
@@ -63,7 +63,7 @@ Claude Code は起動時にこれを自動で読む。人間が読んでも分�
 
 ## 4. 次にやること（優先順）
 
-1. **環境構築**: WSL2 は **Docker**（ユーザー決定: ホストを汚さない）。`docker compose up -d --build` → `docker compose exec sim colcon build --symlink-install`（README 1 節）。DGX Spark は `setup_dgx_spark.sh`。失敗したら README 1 節の手順を 1 行ずつ
+1. ~~**環境構築**~~（済）: WSL2 は **Docker**（ユーザー決定: ホストを汚さない）。`./sim colcon build --symlink-install`（README 1 節）。DGX Spark は `setup_dgx_spark.sh`。失敗したら README 1 節の手順を 1 行ずつ
 2. **ビルド**: `cd ~/pai_ws && colcon build --symlink-install && source install/setup.bash`。setup.py の `data_files` でモデル・ワールド・プロンプトが `share/` に入るか確認
 3. **Gazebo 起動**: `ros2 launch solar_mower_sim sim.launch.py`。確認項目:
    - ワールドが読めるか（heightmap の PNG 読み込み、`model://` 解決は `GZ_SIM_RESOURCE_PATH` を launch で設定済み）

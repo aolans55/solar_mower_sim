@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# シミュレーション用コンテナ内で、ROS 環境を読み込んでからコマンドを実行する
+#   ./sim colcon build --symlink-install
+#   ./sim ros2 launch solar_mower_sim sim.launch.py
+#   ./sim            # 引数なしならシェル
+set -e
+cd "$(dirname "$0")"
+[ "$(docker compose ps -q sim)" ] || docker compose up -d
+tty=(); [ -t 0 ] || tty=(-T)
+[ $# -gt 0 ] || set -- bash
+exec docker compose exec "${tty[@]}" sim /entrypoint.sh "$@"
