@@ -39,8 +39,9 @@ for _ in range(60):
 # 細かいノイズ
 h += 0.08 * rng.standard_normal((N, N))
 
-# パネル列直下は平坦寄り (列は y = ±0.25 (正規化) 付近に置く想定)
-for yc in (0.30, 0.70):
+# パネル列直下は平坦寄り (列はワールド y = ±ROW_Y。地形は 40 m 四方)
+ROW_Y, SIZE = 2.42, 40.0
+for yc in (0.5 - ROW_Y / SIZE, 0.5 + ROW_Y / SIZE):
     w = np.exp(-((y - yc) ** 2) / (2 * 0.025 ** 2))
     h = h * (1 - 0.6 * w)
 

@@ -122,21 +122,30 @@
         <geometry><box><size>0.08 0.08 0.871</size></box></geometry>
       </collision>
       <visual name="front_beam_v">
-        <pose>0 -0.470 0.550 0 0 0</pose>
-        <geometry><box><size>12.0 0.1 0.15</size></box></geometry>
+        <pose>0 -0.470 0.530 0 0 0</pose>
+        <geometry><box><size>12.0 0.1 0.3</size></box></geometry>
         <material><ambient>0.55 0.55 0.58 1</ambient><diffuse>0.55 0.55 0.58 1</diffuse></material>
       </visual>
       <collision name="front_beam_c">
-        <pose>0 -0.470 0.550 0 0 0</pose>
-        <geometry><box><size>12.0 0.1 0.15</size></box></geometry>
+        <pose>0 -0.470 0.530 0 0 0</pose>
+        <geometry><box><size>12.0 0.1 0.3</size></box></geometry>
+      </collision>
+      <visual name="rear_low_beam_v">
+        <pose>0 0.470 0.530 0 0 0</pose>
+        <geometry><box><size>12.0 0.1 0.3</size></box></geometry>
+        <material><ambient>0.55 0.55 0.58 1</ambient><diffuse>0.55 0.55 0.58 1</diffuse></material>
+      </visual>
+      <collision name="rear_low_beam_c">
+        <pose>0 0.470 0.530 0 0 0</pose>
+        <geometry><box><size>12.0 0.1 0.3</size></box></geometry>
       </collision>
       <visual name="rear_beam_v">
-        <pose>0 0.470 0.892 0 0 0</pose>
+        <pose>0 0.470 0.872 0 0 0</pose>
         <geometry><box><size>12.0 0.1 0.1</size></box></geometry>
         <material><ambient>0.55 0.55 0.58 1</ambient><diffuse>0.55 0.55 0.58 1</diffuse></material>
       </visual>
       <collision name="rear_beam_c">
-        <pose>0 0.470 0.892 0 0 0</pose>
+        <pose>0 0.470 0.872 0 0 0</pose>
         <geometry><box><size>12.0 0.1 0.1</size></box></geometry>
       </collision>
     </link>

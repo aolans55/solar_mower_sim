@@ -2,8 +2,9 @@
 <!--
   solar_farm.sdf : ソーラー発電所ワールド
   - 40 x 40 m の不整地 (heightmap)
-  - パネル列 2 本 (x 方向 12 m, y = -8 と y = +8)  ※列の前面(南側=-y)に横梁あり
-  - 履帯草刈りロボット tracked_mower を列1の南側に配置 (前方 +x)
+  - パネル列 2 本 (x 方向 12 m, y = -2.42 と y = +2.42)。列の間の空きは 3.8 m = ロボット全幅 0.76 m の 5 倍
+    (横梁の外面は列中心から ±0.52 m)。横梁は列の両面にあり、列の間からどちらの列も追従できる
+  - 履帯草刈りロボット tracked_mower を列の間の中央・西端に配置 (前方 +x = 東)
   座標系: +x 東, +y 北
 -->
 <sdf version="1.9">
@@ -43,24 +44,24 @@
       <pose>0 0 0 0 0 0</pose>
     </include>
 
-    <!-- パネル列 1 (南側) : 前面横梁は y = -8.47 -->
+    <!-- パネル列 1 (南側) : 列の間に面した裏面横梁の外面は y = -1.90 -->
     <include>
       <uri>model://panel_row</uri>
       <name>panel_row_1</name>
-      <pose>0 -8 0.12 0 0 0</pose>
+      <pose>0 -2.42 0.12 0 0 0</pose>
     </include>
 
-    <!-- パネル列 2 (北側) : 前面横梁は y = +7.53 -->
+    <!-- パネル列 2 (北側) : 列の間に面した前面横梁の外面は y = +1.90 -->
     <include>
       <uri>model://panel_row</uri>
       <name>panel_row_2</name>
-      <pose>0 8 0.12 0 0 0</pose>
+      <pose>0 2.42 0.12 0 0 0</pose>
     </include>
 
-    <!-- 不整地走破デモ用の目印ポール (列間の中央 y=0 を東西に走る) -->
+    <!-- 目印ポール: 列の間の中央 y=0 の西端 (赤) と東端 (緑) -->
     <model name="marker_start">
       <static>true</static>
-      <pose>-12 0 0.8 0 0 0</pose>
+      <pose>-7.5 0 0.8 0 0 0</pose>
       <link name="l"><visual name="v">
         <geometry><cylinder><radius>0.05</radius><length>1.6</length></cylinder></geometry>
         <material><ambient>0.9 0.1 0.1 1</ambient><diffuse>0.9 0.1 0.1 1</diffuse></material>
@@ -68,18 +69,18 @@
     </model>
     <model name="marker_goal">
       <static>true</static>
-      <pose>12 0 0.8 0 0 0</pose>
+      <pose>7.5 0 0.8 0 0 0</pose>
       <link name="l"><visual name="v">
         <geometry><cylinder><radius>0.05</radius><length>1.6</length></cylinder></geometry>
         <material><ambient>0.1 0.9 0.1 1</ambient><diffuse>0.1 0.9 0.1 1</diffuse></material>
       </visual></link>
     </model>
 
-    <!-- 草刈りロボット: 列1の南側 0.9 m, 前方 +x -->
+    <!-- 草刈りロボット: 列の間の中央 (両側の横梁まで各 1.9 m)、列の西端、前方 +x -->
     <include>
       <uri>model://tracked_mower</uri>
       <name>tracked_mower</name>
-      <pose>-7 -9.4 0.55 0 0 0</pose>
+      <pose>-6 0 0.55 0 0 0</pose>
     </include>
 
   </world>
