@@ -188,6 +188,13 @@ solar_mower_sim/
 
 録画は `gz sim` の録画プラグインか OBS。倍速にした場合は動画内に明記。
 
+自動録画 (WSL2 ホスト側で実行。ffmpeg・xwininfo が必要。シミュレーション起動中に):
+```bash
+solar_mower_sim/scripts/record_demo.sh                                   # mow_lane → videos/mow_lane.mp4
+solar_mower_sim/scripts/record_demo.sh videos/follow.mp4 '{"action":"follow_panel","side":"left","distance":1.9,"length":11}'
+```
+GUI を録画用設定 (`config/gui_record.config`: 3D ビューだけ 1280x768、レーン全体が見えるカメラ) で開き直し、ワールドをリセットしてから Gazebo のウィンドウを録画し、`/mission_status` が idle になったら止める。gz-sim 8 の録画ボタン (VideoRecorder) はサービスから操作できないので画面録画にしている。
+
 ## 8. 提出物チェックリスト (課題要項より)
 
 - [ ] 動画 1〜3 分 (YouTube 限定公開以上、タイトル `PAI最終課題_<omnicampusアカウント名>`)
