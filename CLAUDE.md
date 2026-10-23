@@ -11,7 +11,7 @@ Claude Code は起動時にこれを自動で読む。人間が読んでも分�
   1. 自然言語の指示で動く（ローカル LLM: OpenAI 互換 API。WSL2 では LM Studio、DGX Spark では Ollama）
   2. ソーラーパネル列（架台）に平行に走る（LiDAR + RANSAC + PID 壁追従）
   3. 凸凹地面を乗り越えながら直進する（heightmap + 履帯物理 + IMU 方位保持 PID）
-- **締切: 2026-11-02 (月) 10:00**。提出物は (a) 動画 1〜3 分 YouTube 限定公開以上、(b) GitHub public リポジトリ、(c) レポート PDF。課題要項の要点は README 8 節と `docs/report_template.md` を参照
+- **締切: 2026-11-02 (月) 10:00**。提出物は (a) 動画 1〜3 分 YouTube 限定公開以上、(b) GitHub public リポジトリ、(c) レポート PDF。課題要項の要点は `LOCAL.md`（提出チェックリスト。git 管理外でローカルのみ）と `docs/report_template.md` を参照
 - **成果物に氏名・所属・メールを一切含めない**（要項の禁止事項）。コミット作者名も個人名を避ける
 
 ## 1. 現在の状態（2026-10-23 時点）
@@ -74,7 +74,7 @@ Claude Code は起動時にこれを自動で読む。人間が読んでも分�
 4. **壁追従**: `scripts/send_cmd.sh '{"action":"follow_panel","side":"left","distance":0.9,"length":10}'`。振動するなら `PanelFollowController` の `kp_dist` ↓ `kd_dist` ↑。横梁を拾えていなければ LiDAR 高さ
 5. **不整地直進**: 初期位置 `(-6, 0)` から `go_straight heading east distance 12`。列の間（凸凹）をマーカーポール（赤 x=-7.5 → 緑 x=7.5）の方向へ走る。方位保持 ON/OFF での横ずれ差をレポート用に記録
 6. **LLM**: `python3 solar_mower_sim/scripts/test_llm.py` で 8 例の変換を確認（LM Studio は確認済み。DGX Spark の Ollama は `LLM_BASE_URL=http://<host>:11434/v1 LLM_MODEL=qwen2.5:7b` で）。誤変換はプロンプトに例を追加して直す
-7. **録画**: README 7 節の動画構成案。倍速にしたら動画内に明記。`scripts/record_demo.sh` で自動録画できる（2026-10-23 に mow_lane を撮影: videos/mow_lane.mp4、195 s）
+7. **録画**: 動画構成案と録画手順は `LOCAL.md`（git 管理外）。倍速にしたら動画内に明記。`scripts/record_demo.sh` で自動録画できる（2026-10-23 に mow_lane を撮影: videos/mow_lane.mp4、195 s）
 8. **レポート**: `docs/report_template.md` の数値を埋めて PDF 化。ファイル名 `説明資料_PAI最終課題_<omnicampusアカウント名>.pdf`
 
 ## 5. 作業ルール
