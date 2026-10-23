@@ -20,12 +20,12 @@ Claude Code は起動時にこれを自動で読む。人間が読んでも分�
 |---|---|
 | ロボット・ワールド SDF | WSL2 + Docker の Gazebo で起動確認済み（2026-10-23）。地形テクスチャが Classic のパスで読めずワールドが落ちていたのを修正（`scripts/gen_terrain_textures.py` で生成）。`go_straight 3m` で実位置も 3.04 m 前進、RTF ≈ 1.0 |
 | 制御ロジック `controllers.py` | 作成済み。pytest 6 件 PASS（ROS 非依存、コンテナ内でも PASS） |
-| `mission_executor.py` / `llm_commander.py` | executor は ROS 2 上で go_straight 動作確認済み。follow_panel / turn / llm_commander は未確認 |
+| `mission_executor.py` / `llm_commander.py` | executor は go_straight / follow_panel（10 m、距離 0.898±0.025 m、角度 ±1°）を確認。タイマーをシミュレーション時刻に変更。turn / llm_commander は未確認 |
 | launch / bridge.yaml / setup.py | colcon build 成功。/clock /scan /imu /odom がブリッジされることを確認 |
 | LLM プロンプト | 作成済み。LM Studio (`qwen3.5-9b-mtp`) で `test_llm.py` 8/8 OK（2026-10-23）。Ollama では未検証 |
 | 環境構築 | WSL2 は Docker イメージ `solar-mower-sim:jazzy` 構築済み（`./sim` でコンテナ内実行）。DGX Spark は `setup_dgx_spark.sh` |
 
-Gazebo 起動と直進までは確認済み。次は 4 節の 4（壁追従）から。
+壁追従まで確認済み。次は 4 節の 5（不整地直進）から。WSL2 では RTF ≈ 0.25〜0.33（README 6 節）。
 
 ## 2. 開発環境の方針（決定事項）
 
@@ -58,7 +58,7 @@ Gazebo 起動と直進までは確認済み。次は 4 節の 4（壁追従）�
 - JSON アクション: `follow_panel / go_straight / turn / stop / sequence`。仕様は README 4 節
 - `controllers.py` は ROS 非依存。ロジック変更時は `python3 -m pytest solar_mower_sim/test` を必ず通す
 - 座標系: ロボット +x 前 / +y 左、ワールド +x 東 / +y 北。パネル列は x 方向に 12 m、`y=-8` と `y=+8`。架台前面の横梁（LiDAR の基準線）は列から南へ 0.47 m、高さ 0.55 m。ロボット初期位置 `(-7, -9.4)` 前方 +x、列1が左側
-- LiDAR 高さは世界座標で約 0.58 m。横梁（0.50〜0.60 m）に当たる設計。変える時は両方を一緒に動かす
+- LiDAR 高さは世界座標で約 0.67 m（lidar_link z 0.37 + 車体 0.30）。横梁は列 z 0.12 + `BEAM_Z` 0.55 = 中心 0.67 m、上下幅 `BEAM_H` 0.15 m（0.595〜0.745 m）。変える時は両方を一緒に動かす（2026-10-23 に合わせ直した。以前は LiDAR が横梁下端の 1 cm 上で、傾くと外れていた）
 - パネル列と地形は生成物: `scripts/gen_panel_row.py`, `scripts/gen_heightmap.py`。SDF/PNG を手で直さず生成スクリプトを直す
 
 ## 4. 次にやること（優先順）
@@ -104,6 +104,9 @@ solar_mower_sim/
   scripts/setup_dgx_spark.sh        環境構築一括
   scripts/send_cmd.sh               JSON 直送（LLM 抜きデバッグ）
   scripts/test_llm.py               LLM 変換テスト（ROS 不要）
+  scripts/diag_panel_fit.py         LiDAR 横梁検出の診断（シミュレーション起動中に）
+  scripts/gen_terrain_textures.py   地形テクスチャ生成
+  docs/tuning_log.md                調整ログ（レポート材料）
   test/test_controllers.py          pytest
   docs/report_template.md           レポート雛形
 ```
